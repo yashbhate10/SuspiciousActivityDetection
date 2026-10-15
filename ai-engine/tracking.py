@@ -3,7 +3,8 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 from ultralytics import YOLO
 
-from config import MODEL_PATH, CONFIDENCE_THRESHOLD, TRACKER_CONFIG
+import torch
+from config import MODEL_PATH, CONFIDENCE_THRESHOLD, TRACKER_CONFIG, DEVICE
 
 logger = logging.getLogger("ai_engine.tracking")
 
@@ -11,9 +12,10 @@ class ObjectTracker:
     def __init__(self, model_path: str = MODEL_PATH, conf: float = CONFIDENCE_THRESHOLD):
         self.model_path = model_path
         self.conf = conf
-        logger.info(f"Loading YOLO11 model from {model_path}...")
+        self.device = "0" if torch.cuda.is_available() else "cpu"
+        logger.info(f"Loading YOLO11 model on device '{self.device}' from {model_path}...")
         self.model = YOLO(model_path)
-        logger.info("YOLO11 model loaded successfully.")
+        logger.info(f"YOLO11 model loaded on {self.device}.")
 
     def track_frame(self, frame: np.ndarray, persist: bool = True) -> List[Dict[str, Any]]:
         """
@@ -25,6 +27,7 @@ class ObjectTracker:
             persist=persist,
             tracker=TRACKER_CONFIG,
             conf=self.conf,
+            device=self.device,
             imgsz=640,
             verbose=False
         )

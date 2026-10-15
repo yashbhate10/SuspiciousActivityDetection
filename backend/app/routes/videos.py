@@ -183,6 +183,7 @@ def ai_video_stream_generator(video_path: Path):
             break
 
     while True:
+        start_t = time.monotonic()
         ret, frame = cap.read()
         if not ret:
             # Loop video seamlessly for continuous surveillance inspection
@@ -191,6 +192,11 @@ def ai_video_stream_generator(video_path: Path):
             if not ret:
                 break
             frame_idx = 0
+
+        # Downscale large frames to standard 640px width for fast real-time inference
+        if frame.shape[1] > 640:
+            scale = 640.0 / frame.shape[1]
+            frame = cv2.resize(frame, (640, int(frame.shape[0] * scale)))
 
         frame_idx += 1
         video_time = frame_idx / fps
@@ -296,13 +302,14 @@ def ai_video_stream_generator(video_path: Path):
             cv2.rectangle(frame, (0, 39), (w, 75), (0, 0, 225), -1)
             cv2.putText(frame, active_alert_message, (15, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.68, (255, 255, 255), 2, cv2.LINE_AA)
 
-        ret_enc, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+        ret_enc, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 72])
         if ret_enc:
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n"
             )
-        time.sleep(frame_delay)
+        elapsed = time.monotonic() - start_t
+        time.sleep(max(0.002, frame_delay - elapsed))
 
     cap.release()
 

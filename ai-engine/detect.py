@@ -114,6 +114,12 @@ def main():
     if not cap.isOpened():
         print(f"[Warning] Cannot open source '{source}'. Using synthetic feed.")
         cap = None
+    else:
+        # Prevent camera frame queue buffering / lag on live capture
+        if isinstance(source, int) or (isinstance(source, str) and source.isdigit()):
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
     tracker  = ObjectTracker(model_path=MODEL_PATH)
     behaviour = BehaviourEngine()
@@ -149,6 +155,10 @@ def main():
                     ret, frame = cap.read()
                     if not ret:
                         break
+                # Downscale large frames to standard 640px width for 3x faster AI inference & streaming
+                if frame.shape[1] > 640:
+                    scale = 640.0 / frame.shape[1]
+                    frame = cv2.resize(frame, (640, int(frame.shape[0] * scale)))
             else:
                 # Synthetic feed — simulated loitering person
                 frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -278,8 +288,8 @@ def main():
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
 
             # ── Stream & Display ──────────────────────────────────────
-            if args.stream and (frame_count % 2 == 0):
-                ret_enc, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 78])
+            if args.stream:
+                ret_enc, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
                 if ret_enc:
                     alert_dispatcher.push_frame_to_stream(buf.tobytes())
 

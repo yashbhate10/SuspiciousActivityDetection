@@ -1,4 +1,5 @@
 import time
+import asyncio
 import cv2
 import numpy as np
 from threading import Lock
@@ -67,22 +68,31 @@ def generate_placeholder_frame(text: str = "Awaiting Live Feed...") -> bytes:
     _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 80])
     return buffer.tobytes()
 
-def mjpeg_generator(camera_id: str):
+async def mjpeg_generator(camera_id: str):
+    last_frame = None
     while True:
         frame_bytes = stream_manager.get_frame(camera_id)
         if frame_bytes is None:
-            frame_bytes = generate_placeholder_frame("Live Engine Standby / Starting...")
-            time.sleep(0.5)
-        else:
-            time.sleep(0.04)  # ~25 FPS
+            placeholder = generate_placeholder_frame("Live Engine Standby / Starting...")
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + placeholder + b"\r\n"
+            )
+            await asyncio.sleep(0.4)
+            continue
 
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-        )
+        if frame_bytes is not last_frame:
+            last_frame = frame_bytes
+            yield (
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+            )
+            await asyncio.sleep(0.015)
+        else:
+            await asyncio.sleep(0.01)
 
 @router.get("/{camera_id}")
-def live_mjpeg_feed(camera_id: str):
+async def live_mjpeg_feed(camera_id: str):
     """MJPEG streaming endpoint for direct browser embedding."""
     return StreamingResponse(
         mjpeg_generator(camera_id),
