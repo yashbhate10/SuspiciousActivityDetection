@@ -1,0 +1,12 @@
+{
+  "video_name": "sample_walkthrough.mp4",
+  "video_path": "D:\\Projects\\SuspiciousActivityDetection\\data\\test_videos\\sample_walkthrough.mp4",
+  "total_frames": 450,
+  "processed_frames": 450,
+  "video_duration_sec": 18.0,
+  "processing_time_sec": 45.58,
+  "processing_fps": 9.9,
+  "total_suspicious_events": 0,
+  "events_by_type": {},
+  "events": []
+}

@@ -1,0 +1,14 @@
+# YOLOv11 Custom Surveillance Dataset Configuration
+path: data/surveillance
+train: images/train
+val: images/val
+test: images/test
+
+names:
+  0: person
+  1: car
+  2: motorcycle
+  3: bicycle
+  4: backpack
+  5: handbag
+  6: suitcase
